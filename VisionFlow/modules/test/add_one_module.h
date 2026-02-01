@@ -16,7 +16,7 @@ public:
     {
         int in = input("in").toInt();
         qDebug() << "[AddOne] in =" << in;
-        setOutput("out", in + 1);
+        setOutput("out", in + 2);
         return true;
     }
 };

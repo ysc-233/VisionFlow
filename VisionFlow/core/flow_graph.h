@@ -23,7 +23,7 @@ public:
 
     const QMap<NodeId, FlowNode>& nodes() const;
     const QVector<FlowConnection>& connections() const;
-
+    const FlowPort* port(const NodeId& nodeId,const PortId& portId) const;
 
     bool validate(QString* errorMessage = nullptr) const;
     QVector<NodeId> topologicalSort(bool* ok = nullptr) const;

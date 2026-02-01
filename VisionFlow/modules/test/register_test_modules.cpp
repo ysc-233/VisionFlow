@@ -25,7 +25,7 @@ void registerTestModules()
 
 
         def.defaultParameters = {
-            { "value", 1 }
+            { "value", 5 }
         };
 
 
