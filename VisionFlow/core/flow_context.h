@@ -19,6 +19,6 @@ public:
 
 
 private:
-    QMap<PortId, QVariant> m_data;
+    QHash<PortId, QVariant> m_data;
 };
 #endif // FLOW_CONTEXT_H

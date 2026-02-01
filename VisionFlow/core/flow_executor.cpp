@@ -3,7 +3,8 @@
 // core/flow_executor.cpp（修改版）
 // =======================================================
 #include "flow_executor.h"
-
+#include "flow_graph_validator.h"
+#include <QDebug>
 FlowExecutor::FlowExecutor(const FlowGraph& graph)
     : m_graph(graph)
 {
@@ -19,36 +20,66 @@ void FlowExecutor::stop()
 ModulePortBinding FlowExecutor::buildBinding(const FlowNode& node) const
 {
     ModulePortBinding binding;
+    const NodeId& nodeId = node.id();
 
-        // -------- input ports --------
-        for (const FlowPort& port : node.inputPorts())
+    // =====================================================
+    // 输出端口：端口名 -> PortId
+    // =====================================================
+    for (const FlowPort& port : node.outputPorts())
+    {
+        // 端口名是 port.id().port
+        QString portName = port.id().port;
+        // 创建对应的 PortId
+        PortId pid(nodeId, portName);
+        // 使用端口名作为键
+        binding.outputs.insert(portName, pid);
+
+        qDebug() << "[Binding DEBUG] Output binding:"
+                 << portName << "->" << pid.toString();
+    }
+
+    // =====================================================
+    // 输入端口：从连接中查找上游 PortId
+    // =====================================================
+    for (const FlowPort& port : node.inputPorts())
+    {
+        QString portName = port.id().port;
+        bool found = false;
+
+        for (const FlowConnection& c : m_graph.connections())
         {
-            const QString targetKey = port.contextKey(); // e.g. "n2.in"
+            const PortId& to = c.toPort();
 
-            for (const FlowConnection& c : m_graph.connections())
+            // 匹配当前节点的输入端口
+            if (to.node == nodeId && to.port == portName)
             {
-                if (c.toPort() == targetKey)
-                {
-                    // input("in") → 读取 fromPort 的值
-                    binding.inputs.insert(port.id(), c.fromPort());
-                    break;
-                }
+                binding.inputs.insert(portName, c.fromPort());
+                found = true;
+                qDebug() << "[Binding DEBUG] Input binding found:"
+                         << portName << "->" << c.fromPort().toString();
+                break;
             }
         }
 
-        // -------- output ports --------
-        for (const FlowPort& port : node.outputPorts())
+        if (!found)
         {
-            // output("out") → 写入自己的 key
-            binding.outputs.insert(port.id(), port.contextKey());
+            qWarning() << "[Binding DEBUG] Input port not bound:"
+                       << nodeId << "." << portName;
         }
+    }
 
-        return binding;
+    return binding;
 }
-
 
 bool FlowExecutor::run()
 {
+    QString error;
+    if (!FlowGraphValidator::validate(m_graph, &error))
+    {
+        qWarning() << "[FlowExecutor] Graph validation failed:" << error;
+        return false;
+    }
+
     m_context.clear();
     m_stopRequested = false;
 

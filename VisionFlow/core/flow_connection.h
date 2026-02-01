@@ -11,16 +11,15 @@ class FlowConnection
 {
 public:
     FlowConnection() = default;
-    FlowConnection(const PortId& from, const PortId& to);
+    FlowConnection(const PortId& from, const PortId& to)
+        : m_from(from), m_to(to)
+    {}
 
-
-    const PortId& fromPort() const;
-    const PortId& toPort() const;
-
+    const PortId& fromPort() const { return m_from; }
+    const PortId& toPort() const { return m_to; }
 
 private:
-    PortId m_fromPortId;
-    PortId m_toPortId;
+    PortId m_from;
+    PortId m_to;
 };
-
 #endif // FLOW_CONNECTION_H

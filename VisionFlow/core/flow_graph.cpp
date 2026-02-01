@@ -31,24 +31,15 @@ bool FlowGraph::removeNode(const NodeId& nodeId)
     while (it != m_connections.end())
     {
         const FlowConnection& c = *it;
-        bool related = false;
-
-        for (const auto& node : m_nodes)
+        if (c.fromPort().node == nodeId ||
+            c.toPort().node == nodeId)
         {
-            Q_UNUSED(node);
-        }
-
-        // 简化判断：端口 ID 以 NodeId 作为前缀（约定）
-        if (c.fromPort().startsWith(nodeId) ||
-                c.toPort().startsWith(nodeId))
-        {
-            related = true;
-        }
-
-        if (related)
             it = m_connections.erase(it);
+        }
         else
+        {
             ++it;
+        }
     }
 
     m_nodes.remove(nodeId);
@@ -64,14 +55,14 @@ const FlowNode *FlowGraph::node(const QString &nodeId) const {
 // ------------------------------
 // 添加 / 删除连接
 // ------------------------------
-
+#include <QtDebug>
 bool FlowGraph::addConnection(const FlowConnection& connection)
 {
     // 不允许重复连接
     for (const auto& c : m_connections)
     {
         if (c.fromPort() == connection.fromPort() &&
-                c.toPort() == connection.toPort())
+            c.toPort() == connection.toPort())
         {
             return false;
         }
@@ -109,6 +100,22 @@ const QVector<FlowConnection>& FlowGraph::connections() const
 {
     return m_connections;
 }
+
+const FlowPort* FlowGraph::port(const NodeId& nodeId,const PortId& portId) const
+{
+    const FlowNode* node = this->node(nodeId);
+    if (!node)
+        return nullptr;
+
+    for (const FlowPort& port : node->ports())
+    {
+        if (port.id() == portId)
+            return &port;
+    }
+
+    return nullptr;
+}
+
 
 // ------------------------------
 // 流程合法性校验
@@ -158,7 +165,6 @@ QVector<NodeId> FlowGraph::topologicalSort(bool* ok) const
 {
     QVector<NodeId> result;
 
-    // 1. 构建入度表
     QMap<NodeId, int> inDegree;
     QMap<NodeId, QVector<NodeId>> adjacency;
 
@@ -167,25 +173,19 @@ QVector<NodeId> FlowGraph::topologicalSort(bool* ok) const
         inDegree[nodeId] = 0;
     }
 
-    // 简化假设：通过端口前缀解析所属 NodeId
-    auto portToNode = [](const PortId& pid) -> NodeId {
-        int idx = pid.indexOf(":");
-        return idx > 0 ? pid.left(idx) : NodeId();
-    };
-
     for (const auto& c : m_connections)
     {
-        NodeId fromNode = portToNode(c.fromPort());
-        NodeId toNode   = portToNode(c.toPort());
+        NodeId fromNode = c.fromPort().node;
+        NodeId toNode   = c.toPort().node;
 
-        if (fromNode.isEmpty() || toNode.isEmpty())
+        if (!inDegree.contains(fromNode) ||
+            !inDegree.contains(toNode))
             continue;
 
         adjacency[fromNode].push_back(toNode);
         inDegree[toNode]++;
     }
 
-    // 2. 初始化队列（入度为 0 的节点）
     QQueue<NodeId> queue;
     for (auto it = inDegree.begin(); it != inDegree.end(); ++it)
     {
@@ -193,7 +193,6 @@ QVector<NodeId> FlowGraph::topologicalSort(bool* ok) const
             queue.enqueue(it.key());
     }
 
-    // 3. Kahn
     while (!queue.isEmpty())
     {
         NodeId n = queue.dequeue();
@@ -207,7 +206,6 @@ QVector<NodeId> FlowGraph::topologicalSort(bool* ok) const
         }
     }
 
-    // 4. 是否成功
     if (ok)
         *ok = (result.size() == m_nodes.size());
 

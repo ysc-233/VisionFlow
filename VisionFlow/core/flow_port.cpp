@@ -43,5 +43,5 @@ const NodeId& FlowPort::ownerNodeId() const
 
 QString FlowPort::contextKey() const
 {
-    return m_ownerNodeId + "." + m_id;
+    return m_ownerNodeId + "." + m_id.port;
 }
