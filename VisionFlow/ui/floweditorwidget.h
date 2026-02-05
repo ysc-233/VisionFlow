@@ -3,7 +3,7 @@
 #pragma once
 
 #include <QWidget>
-
+#include <memory>
 namespace QtNodes {
 class BasicGraphicsScene;
 class GraphicsView;

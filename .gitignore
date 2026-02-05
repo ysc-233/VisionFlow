@@ -37,7 +37,11 @@ ui_*
 
 # 第三方依赖（不上传）
 VisionFlow/ThirdParties/
-
+# 构建目录
+build*/
+build-*/
+*/build/
+*/build-*/
 # 系统文件
 .DS_Store
 Thumbs.db

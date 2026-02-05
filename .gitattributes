@@ -1,0 +1,23 @@
+# 对 C++ 源文件禁用换行符转换
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+
+# 强制特定文件使用 UTF-8 编码
+*.cpp charset=utf-8
+*.h charset=utf-8
+*.hpp charset=utf-8
+*.txt charset=utf-8
+*.md charset=utf-8
+*.cmake charset=utf-8
+*.txt charset=utf-8
+
+# 二进制文件不处理
+*.png binary
+*.jpg binary
+*.ico binary
+*.lib binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
