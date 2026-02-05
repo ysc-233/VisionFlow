@@ -1,212 +1,199 @@
-# VisionFlow 当前框架与实现概览
+# VisionFlow
 
-> 本文档用于总结当前 VisionFlow 项目的**整体架构、已实现功能与关键设计决策**，并给出**下一阶段的推荐演进路线**。
+VisionFlow 是一个基于 **Qt + QtNodes + OpenCV** 构建的
+**可视化图像处理流程编辑与执行工具**，用于通过节点流程方式搭建图像处理
+pipeline，实现工业视觉流程的快速构建与扩展。
 
----
+系统支持通过节点拖拽、连接方式构建数据流，并在点击运行按钮后执行整条处理链。
 
-## 1. 项目目标（当前阶段）
+------------------------------------------------------------------------
 
-VisionFlow 是一个 **基于节点（Node）/端口（Port）/连线（Connection）的数据流执行引擎**，目标是：
+## 当前功能概览
 
-- 支持模块化的数据处理流程
-- 支持清晰、可扩展的 Flow Graph 描述
-- 提供稳定、可验证的执行引擎（Execution Engine）
-- 为后续 UI 编辑器 / 序列化 / 图像处理模块打下核心基础
+当前版本已实现：
 
-当前阶段的目标已经聚焦在：
+### 可视化流程编辑
 
-> **“一个最小但完整、可执行、数据正确流动的 Flow 引擎内核”**
+-   基于 QtNodes 的节点编辑界面
+-   支持节点拖拽与连接
+-   支持右键菜单创建节点
+-   自动注册节点并分类显示
+-   支持流程保存与加载（QtNodes 自带能力）
 
----
+------------------------------------------------------------------------
 
-## 2. 核心架构总览
+### 图像处理节点
 
-整体架构可以抽象为五个核心层次：
+当前已实现基础图像处理流程：
 
-```
-ModuleDefinition / ModuleRegistry
-            ↓
-         FlowNode
-            ↓
-FlowGraph (Nodes + Connections)
-            ↓
-      FlowExecutor
-            ↓
-        FlowContext
-```
+ImageLoad → ImageGray → ImageMerge → ImageSave
 
----
+支持节点：
 
-## 3. Core 数据模型
+#### ImageLoad
 
-### 3.1 FlowNode
+-   从文件加载图像
+-   UI 中可选择图像路径
+-   输出 OpenCV Mat 数据
 
-**职责**：
-- 表示 FlowGraph 中的一个节点实例
-- 绑定一个 moduleType（对应可执行模块）
-- 持有端口（FlowPort）与参数（parameters）
+#### ImageGray
 
-**核心属性**：
-- NodeId（全局唯一）
-- moduleType（字符串）
-- ports（输入 / 输出端口）
-- parameters（运行期参数）
+-   输入彩色图像
+-   输出灰度图像
 
-**设计要点**：
-- FlowNode 本身不负责创建端口
-- 不在构造期依赖 ModuleRegistry
-- 是一个“图数据节点”，而不是模块工厂
+#### ImageMerge
 
----
+-   支持两路输入图像
+-   支持拼接模式：
+    -   横向拼接
+    -   纵向拼接
 
-### 3.2 FlowPort
+#### ImageSave
 
-**职责**：
-- 表示节点上的一个输入 / 输出端口
-- 提供数据流在 FlowContext 中的唯一 Key
+-   保存图像到文件
+-   UI 可选择输出路径
 
-**关键设计**：
-- FlowPort 同时持有：
-  - portId（如 `in` / `out`）
-  - ownerNodeId（所属节点）
-- 通过 `contextKey()` 统一生成数据通道 Key：
+------------------------------------------------------------------------
 
-```
-<nodeId>.<portId>
-```
+### 执行控制
 
-这是当前数据流正确运行的**关键约定**。
+流程不会自动执行，需点击 **Run 按钮**：
 
----
+Run → 执行整张流程图
 
-### 3.3 FlowConnection
+执行过程：
 
-**职责**：
-- 描述一个端口到端口的连接关系
+1.  FlowRunner 遍历全部节点
+2.  触发 dataUpdated
+3.  QtNodes 自动传播数据流
+4.  下游节点执行 setInData
+5.  完成 pipeline
 
-**当前模型**：
-- fromPort：上游端口（contextKey）
-- toPort：下游端口（contextKey）
+------------------------------------------------------------------------
 
-**设计取舍**：
-- Connection 是“端口级”的，不直接依赖 Node
-- 连接语义在执行期由 FlowExecutor 解析
+### 执行耗时统计
 
----
+当前支持：
 
-## 4. 执行系统
+-   流程总执行时间统计
+-   每个节点执行耗时统计
 
-### 4.1 FlowGraph
+用于后续性能优化。
 
-**职责**：
-- 管理所有 FlowNode
-- 管理 FlowConnection
-- 提供拓扑排序（topologicalSort）
+------------------------------------------------------------------------
 
-**当前能力**：
-- Node 增删
-- Connection 增删
-- DAG 校验基础能力
+## 软件架构
 
----
+系统整体分为四层：
 
-### 4.2 FlowExecutor
+### 1. UI 层
 
-**职责**：
-- 根据 FlowGraph 的拓扑顺序执行节点
-- 为每个节点创建模块实例
-- 构建 ModulePortBinding
-- 调度模块执行
+VisionFlowView\
+↓\
+FlowEditorWidget\
+↓\
+FlowView + FlowScene
 
-**执行流程（简化）**：
+职责： - 流程编辑界面 - 节点拖拽与连线 - 节点创建与删除 - Run
+按钮执行流程
 
-```
-clear context
-for node in topo order:
-    create module
-    build input/output binding
-    bind context & parameters
-    module.execute()
-```
+------------------------------------------------------------------------
 
-**已验证能力**：
-- 执行顺序正确
-- stop 机制可扩展
-- 多模块数据流正确传播
+### 2. Graph Model 层（QtNodes）
 
----
+核心：
 
-### 4.3 FlowContext
+DataFlowGraphModel
 
-**职责**：
-- 保存运行期所有端口的数据
-- 通过 contextKey 进行读写
+管理： - 节点实例 - 连接关系 - 数据传播 - 保存/加载
 
-**当前特点**：
-- 使用 QVariant 存储数据
-- 不存在 Key 时返回默认值（当前阶段设计）
+------------------------------------------------------------------------
 
----
+### 3. Node 节点层
 
-## 5. 模块系统
+所有节点继承：
 
-### 5.1 BaseModule
+NodeDelegateModel
 
-**职责**：
-- 所有模块的基类
-- 定义统一的生命周期接口
+每个节点实现：
 
-**核心能力**：
-- bind(binding, parameters, context)
-- input(name)
-- setOutput(name, value)
-- execute()
+-   setInData 接收数据
+-   outData 输出数据
+-   embeddedWidget UI
 
-模块不关心 Graph，只关心：
-> **“我从哪里读数据、往哪里写数据”**
+节点逻辑在此层完成。
 
----
+------------------------------------------------------------------------
 
-### 5.2 ModuleRegistry / ModuleDefinition
+### 4. 执行层
 
-**ModuleDefinition**：
-- 描述模块的结构性信息（ports / 默认参数）
+FlowRunner
 
-**ModuleRegistry**：
-- 管理 moduleType → definition / creator 的映射
-- 支持动态注册模块
+职责：
 
-**当前状态**：
-- 模块系统稳定
-- 支持最小 demo 模块注册
+Run按钮 → FlowRunner::run\
+　　　　　 ↓\
+　　 触发节点数据传播\
+　　　　　 ↓\
+QtNodes 自动执行 pipeline
 
----
+------------------------------------------------------------------------
 
-## 6. 最小可执行 Demo（已完成）
+## 当前目录结构（简化）
 
-当前已实现并验证的最小 Flow：
+VisionFlow/
 
-```
-ConstInt(value=1) → AddOne → Print
-```
+├─ ui/\
+│ ├─ VisionFlowView\
+│ └─ FlowEditorWidget
 
-**运行日志验证**：
-- ConstInt 正确输出 1
-- AddOne 正确接收并输出 2
-- PrintModule 正确打印结果
+├─ flow/\
+│ ├─ FlowRunner\
+│ ├─ FlowScene\
+│ └─ FlowExecutionContext
 
-这标志着：
+├─ nodes/\
+│ ├─ ImageLoadNode\
+│ ├─ ImageGrayNode\
+│ ├─ ImageMergeNode\
+│ └─ ImageSaveNode
 
-> **VisionFlow 的“数据流执行内核”已经完整成立**
+├─ thirdparties/\
+│ └─ QtNodes
 
----
+└─ CMakeLists.txt
 
-## 7. 当前阶段的设计边界（刻意未做）
+------------------------------------------------------------------------
 
-以下内容是**刻意未实现**，属于下一阶段：
+## 当前设计目标
 
-- Node 自动从 ModuleDefinition 构建
-- 执行前强校验（未连接端口 / 类型不匹配）
-- UI / NodeEditor
-- Graph 序列化 / 反序列化
-- 多线程 / 并行执行
+VisionFlow 的目标是构建：
+
+-   工业视觉流程编辑器
+-   可扩展节点系统
+-   模块化执行引擎
+-   插件化算法扩展
+
+后续规划包括：
+
+-   节点参数面板
+-   执行调试模式
+-   节点执行高亮
+-   多线程执行
+-   节点耗时可视化
+-   插件式算法加载
+
+------------------------------------------------------------------------
+
+## 当前版本总结
+
+当前已完成：
+
+-   QtNodes 集成
+-   OpenCV 集成
+-   节点流程执行
+-   图像加载处理保存
+-   多输入节点支持
+-   执行耗时统计
+
+VisionFlow 已具备基础视觉流程处理能力。
