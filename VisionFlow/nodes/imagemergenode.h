@@ -3,34 +3,37 @@
 #pragma once
 
 #include <QtNodes/NodeDelegateModel>
-#include <QImage>
-#include "imagedata.h"
-#include "ui/flowexecutioncontext.h"
+#include "flow/executor/flowexecutioncontext.h"
+
 #include <QComboBox>
 #include <QVBoxLayout>
 #include <QWidget>
-class ImageMergeNode : public QtNodes::NodeDelegateModel
+
+#include <memory>
+#include <opencv2/opencv.hpp>
+#include "flow/graph/flownode.h"
+#include "flow/flowtypes.h"
+class ImageMergeNode : public QtNodes::NodeDelegateModel,public FlowNode
 {
     Q_OBJECT
 
 public:
     ImageMergeNode();
+
     QString caption() const override { return "Image Merge"; }
     bool captionVisible() const override { return true; }
-    QString name() const override { return "ImageMerge"; }
+    QString name() const override { return flowNodeName; }
 
     unsigned int nPorts(QtNodes::PortType type) const override
     {
-        if (type == QtNodes::PortType::In)
-            return 2;
-        return 1;
+        return (type == QtNodes::PortType::In) ? 2 : 1;
     }
 
     QtNodes::NodeDataType dataType(
         QtNodes::PortType,
         QtNodes::PortIndex) const override
     {
-        return {"image","Image"};
+        return {"image", "Image"};
     }
 
     void setInData(std::shared_ptr<QtNodes::NodeData> data,
@@ -40,15 +43,16 @@ public:
     outData(QtNodes::PortIndex) override;
 
     QWidget* embeddedWidget() override { return _widget; }
+    void setInput(int port, const QVariant &data) override;
+    QVariant getOutput(int port) override;
+    void compute() override;
 
 private:
-    void compute();
-
-private:
-    QImage _inputs[2];
+    MatPtr _inputs[2];
     bool _ready[2] = {false, false};
+    MatPtr _out;
+
     QWidget* _widget = nullptr;
     QComboBox* _modeBox = nullptr;
-    QImage _out;
 };
 #endif // IMAGEMERGENODE_H

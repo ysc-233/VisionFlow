@@ -4,6 +4,8 @@
 #include <QtNodes/BasicGraphicsScene>
 #include <QtNodes/DataFlowGraphModel>
 #include <QtNodes/GraphicsView>
+#include <QtDebug>
+#include <QThread>
 #include <QtNodes/NodeDelegateModelRegistry>
 #include "nodes/flownodeautoregister.h"
 #include "flowview.h"
@@ -12,6 +14,7 @@ FlowEditorWidget::FlowEditorWidget(QWidget *parent)
     : QWidget(parent)
 {
     using namespace QtNodes;
+    qDebug()<<__FUNCTION__<< QThread::currentThreadId() << "Start...";
     // 创建 Registry
     m_registry = std::make_shared<NodeDelegateModelRegistry>();
     NodeAutoRegistry::instance().registerAll(*m_registry);

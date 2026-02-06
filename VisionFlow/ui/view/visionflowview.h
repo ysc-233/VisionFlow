@@ -2,7 +2,7 @@
 #define VISIONFLOWVIEW_H
 
 #include <QWidget>
-#include "ui/floweditorwidget.h"
+#include "ui/component/floweditorwidget.h"
 namespace Ui {
 class VisionFlowView;
 }

@@ -4,8 +4,7 @@
 #include <QContextMenuEvent>
 void FlowView::contextMenuEvent(QContextMenuEvent *event)
 {
-    auto s =
-        dynamic_cast<QtNodes::BasicGraphicsScene*>(scene());
+    auto s = dynamic_cast<QtNodes::BasicGraphicsScene*>(scene());
 
     if (!s)
         return;
