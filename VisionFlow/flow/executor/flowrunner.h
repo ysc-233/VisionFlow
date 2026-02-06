@@ -8,6 +8,7 @@ class FlowRunner
 {
 public:
     static void run(QtNodes::DataFlowGraphModel& model);
+    static void stop();
 };
 
 #endif // FLOWRUNNER_H

@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 #include <functional>
-
+#include <QThread>
 class NodeAutoRegistry
 {
 public:
@@ -39,7 +39,7 @@ class NodeRegistrar
 public:
     NodeRegistrar(QString category)
     {
-        qDebug() << "Register node:" << typeid(T).name();
+        qDebug() << __FUNCTION__<< QThread::currentThreadId() << typeid(T).name();
         NodeAutoRegistry::instance().add(
             [category](QtNodes::NodeDelegateModelRegistry& reg)
             {

@@ -1,10 +1,9 @@
 #ifndef FLOWEXECUTIONCONTEXT_H
 #define FLOWEXECUTIONCONTEXT_H
-#pragma once
+#include <atomic>
 
-class FlowExecutionContext
-{
+class FlowExecutionContext {
 public:
-    static bool running;
+    static std::atomic<bool> running;
 };
 #endif // FLOWEXECUTIONCONTEXT_H
