@@ -11,10 +11,11 @@ class ImageGrayNode : public QtNodes::NodeDelegateModel, public FlowNode
     Q_OBJECT
 
 public:
-    ImageGrayNode (){flowNodeName = "ImageGray";}
+    static QString staticNodeName;
+    ImageGrayNode (){setStatus(FlowStatus::NodeStatus::Idle);}
     QString caption() const override { return "Gray"; }
     bool captionVisible() const override { return true; }
-    QString name() const override {return flowNodeName; }
+    QString name() const override {return staticNodeName; }
 
     unsigned int nPorts(QtNodes::PortType) const override
     {

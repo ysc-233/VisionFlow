@@ -18,11 +18,12 @@ class ImageMergeNode : public QtNodes::NodeDelegateModel,public FlowNode
     Q_OBJECT
 
 public:
+    static QString staticNodeName;
     ImageMergeNode();
 
     QString caption() const override { return "Image Merge"; }
     bool captionVisible() const override { return true; }
-    QString name() const override { return flowNodeName; }
+    QString name() const override { return staticNodeName; }
 
     unsigned int nPorts(QtNodes::PortType type) const override
     {

@@ -11,29 +11,28 @@ class IntOutputNode : public QtNodes::NodeDelegateModel, public FlowNode
     Q_OBJECT
 
 public:
+    static QString staticNodeName;
     IntOutputNode(int initValue = 0)
         : FlowNode(), value(initValue)
     {
-        flowNodeName = "IntOutput";
-
-        // 创建界面控件
+        setStatus(FlowStatus::NodeStatus::Idle);
         _widget = new QWidget();
         auto layout = new QVBoxLayout(_widget);
         _spinBox = new QSpinBox();
-        _spinBox->setRange(0, 100); // 可根据需求调整
+        _spinBox->setRange(0, 100);
         _spinBox->setValue(value);
 
         layout->addWidget(_spinBox);
 
         connect(_spinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int v){
             value = v;
-            Q_EMIT dataUpdated(0); // 触发更新
+            Q_EMIT dataUpdated(0);
         });
     }
 
     QString caption() const override { return "Int Output"; }
     bool captionVisible() const override { return true; }
-    QString name() const override { return flowNodeName; }
+    QString name() const override { return staticNodeName; }
 
     unsigned int nPorts(QtNodes::PortType type) const override
     {
@@ -55,8 +54,8 @@ public:
 
     QVariant getOutput(int) override { return QVariant::fromValue(value); }
 
-    void setInput(int, const QVariant&) override {} // 无输入
-    void compute() override {} // 不做任何处理
+    void setInput(int, const QVariant&) override {}
+    void compute() override;
 
 private:
     int value;

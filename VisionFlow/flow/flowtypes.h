@@ -2,17 +2,38 @@
 #define FLOWTYPES_H
 #pragma once
 
-#include <memory>
-#include <opencv2/opencv.hpp>
 #include <QMetaType>
-
-using MatPtr = std::shared_ptr<cv::Mat>;
-
-Q_DECLARE_METATYPE(MatPtr)
-
 #include <QtNodes/NodeData>
 #include <opencv2/opencv.hpp>
 #include <memory>
+#include <QMetaEnum>
+using MatPtr = std::shared_ptr<cv::Mat>;
+Q_DECLARE_METATYPE(MatPtr)
+
+class FlowStatus : public QObject
+{
+    Q_OBJECT
+public:
+    enum NodeStatus {
+        Idle,
+        Waiting,
+        Done,
+        Timeout,
+        Running
+    };
+    Q_ENUM(NodeStatus)
+
+    static QString ConverToString(NodeStatus status)
+    {
+        const QMetaObject &mo = FlowStatus::staticMetaObject;
+        int index = mo.indexOfEnumerator("NodeStatus");
+        if (index < 0)
+            return {};
+        QMetaEnum metaEnum = mo.enumerator(index);
+        return metaEnum.valueToKey(static_cast<int>(status));
+    }
+};
+
 class ImageData : public QtNodes::NodeData
 {
 public:
@@ -57,4 +78,5 @@ public:
 private:
     std::shared_ptr<int> _value;
 };
+
 #endif // FLOWTYPES_H

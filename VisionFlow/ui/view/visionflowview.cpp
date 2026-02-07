@@ -1,9 +1,11 @@
 #include "visionflowview.h"
 #include "ui_visionflowview.h"
-#include "flow/executor/flowrunner.h"
 #include <QVBoxLayout>
 #include <QDebug>
 #include <QThread>
+#include "flow/executor/flowrunner.h"
+#include "ui/component/NodeLibrary/nodelibrarywidget.h"
+
 VisionFlowView::VisionFlowView(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::VisionFlowView)
@@ -13,6 +15,10 @@ VisionFlowView::VisionFlowView(QWidget *parent) :
     m_flowEditorWidget = new FlowEditorWidget(this);
     QVBoxLayout *lay = new QVBoxLayout(ui->gpb_workspace);
     lay->addWidget(m_flowEditorWidget);
+
+    NodeLibraryWidget *m_nodeLibraryWidget = new NodeLibraryWidget(this);
+    QVBoxLayout *lay_nodeLib = new QVBoxLayout(ui->gpb_nodeLibrary);
+    lay_nodeLib->addWidget(m_nodeLibraryWidget);
     setConnections();
 }
 

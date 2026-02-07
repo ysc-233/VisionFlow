@@ -6,71 +6,93 @@
 #include <QThread>
 #include "flow/executor/flowexecutioncontext.h"
 
-void FlowExecutorWorker::run(FlowGraph graph)
+void FlowExecutorWorker::run(FlowGraph &graph)
 {
-    qDebug() << __FUNCTION__ << QThread::currentThreadId() <<
-                "Running!==================================";
+    qDebug() << __FUNCTION__
+             << QThread::currentThreadId()
+             << "Running =============================";
 
+    // ---------- 拓扑排序 ----------
     auto order = topologicalSort(graph);
     qDebug() << "Execution order:" << order;
 
-    // 建立节点 id -> 节点实例映射
+    // ---------- 建立 id -> instance 映射 ----------
     QHash<FlowNodeId, FlowNodeInstance*> map;
     for (auto& n : graph.nodes)
         map[n.id] = &n;
 
+    // ---------- 建立输出连接缓存 ----------
+    QHash<FlowNodeId, QVector<FlowConnection>> outputMap;
+    for (auto& conn : graph.connections)
+        outputMap[conn.fromNode].push_back(conn);
+
+    // ---------- 计时 ----------
     QHash<FlowNodeId, qint64> nodeCost;
     QElapsedTimer totalTimer;
     totalTimer.start();
 
-    for (auto id : order)
+    // ---------- 主执行循环 ----------
+    while (FlowExecutionContext::running.load())
     {
-        if (!FlowExecutionContext::running.load())
-            break; // 全局停止
+        bool hasActiveNode = false;
 
-        auto* inst = map.value(id, nullptr);
-        if (!inst || !inst->flowNode)
-            continue;
-
-        QElapsedTimer nodeTimer;
-        nodeTimer.start();
-
-        // --------- 1️⃣ compute ----------
-        inst->flowNode->compute();  // compute 内部应轮询 FlowExecutionContext::running
-
-        qint64 computeMs = nodeTimer.elapsed();
-
-        if (!FlowExecutionContext::running.load())
-            break; // compute 内部可能触发停止
-
-        // --------- 2️⃣ propagate ----------
-        QElapsedTimer propTimer;
-        propTimer.start();
-
-        for (auto& conn : graph.connections)
+        for (auto id : order)
         {
-            if (conn.fromNode != id)
+            auto* inst = map.value(id, nullptr);
+            if (!inst || !inst->flowNode)
                 continue;
 
-            auto* dst = map.value(conn.toNode, nullptr);
-            if (!dst || !dst->flowNode)
+            auto status = inst->flowNode->getStatus();
+//            qDebug() << __FUNCTION__ <<"Before:"<< inst->model->name() <<FlowStatus::ConverToString(status);
+            if (status == FlowStatus::Timeout)
+            {
+                FlowExecutionContext::running.store(false);
+                break;
+            }
+
+            if (status == FlowStatus::Done)
                 continue;
 
-            auto data = inst->flowNode->getOutput(conn.fromPort);
-            dst->flowNode->setInput(conn.toPort, data);
+            if (status == FlowStatus::Waiting ||
+                status == FlowStatus::Running ||
+                status == FlowStatus::Idle)
+            {
+                hasActiveNode = true;
+            }
+
+            QElapsedTimer nodeTimer;
+            nodeTimer.start();
+
+            inst->flowNode->compute();
+
+            nodeCost[id] += nodeTimer.elapsed();
+
+//            qDebug() << __FUNCTION__ <<"After:"<< inst->model->name() <<FlowStatus::ConverToString(inst->flowNode->getStatus());
+            if (inst->flowNode->getStatus() == FlowStatus::Done)
+            {
+                auto conns = outputMap.value(id);
+
+                for (auto& conn : conns)
+                {
+                    auto* dst = map.value(conn.toNode, nullptr);
+                    if (!dst || !dst->flowNode)
+                        continue;
+
+                    auto data =
+                        inst->flowNode->getOutput(conn.fromPort);
+
+                    dst->flowNode->setInput(conn.toPort, data);
+                }
+
+                emit nodeUpdated(id);
+            }
         }
 
-        qint64 propagateMs = propTimer.elapsed();
-        qint64 totalMs = nodeTimer.elapsed();
-        nodeCost[id] = totalMs;
+        if (!hasActiveNode)
+            break;
 
-        qDebug() << "[Node]" << inst->flowNode->flowNodeName
-                 << "(id:" << id << ")"
-                 << "compute:" << computeMs << "ms"
-                 << "propagate:" << propagateMs << "ms"
-                 << "total:" << totalMs << "ms";
+        QThread::msleep(5);
     }
-
     qDebug() << "===== Node Cost Summary =====";
     for (auto id : order)
     {
@@ -78,18 +100,22 @@ void FlowExecutorWorker::run(FlowGraph graph)
         if (!inst || !inst->flowNode)
             continue;
 
-        QString nodeName = inst->flowNode->flowNodeName;
-        qDebug() << "[Node]" << nodeName
+        qDebug() << "[Node]"
+                 << inst->model->name()
                  << "(id:" << id << ")"
                  << "total:" << nodeCost[id] << "ms";
     }
-
     qDebug() << "===== Total Execution Time ====="
-             << totalTimer.elapsed() << "ms";
-
-    qDebug() << __FUNCTION__ << QThread::currentThread() <<
-                "Finished!==================================";
-
+             << totalTimer.elapsed()
+             << "ms";
+    //Reset Status
+    for (auto id : order)
+    {
+        auto* inst = map.value(id, nullptr);
+        if (!inst || !inst->flowNode)
+            continue;
+        inst->flowNode->setStatus(FlowStatus::Idle);
+    }
     emit finished();
 }
 

@@ -3,12 +3,17 @@
 #include "flow/flowtypes.h"
 
 #include <memory>
-
+QString IntOutputNode::staticNodeName = "IntOutput";
 // 返回 NodeData 形式的 int，供下游节点接收
 std::shared_ptr<QtNodes::NodeData> IntOutputNode::outData(QtNodes::PortIndex)
 {
-    // 需要自己封装一个 NodeData 类型
     return std::make_shared<IntNodeData>(value);
 }
 
-REGISTER_NODE(IntOutputNode, "IntOutputNode")
+void IntOutputNode::compute()
+{
+    qDebug()<<__FUNCTION__<<value;
+    setStatus( FlowStatus::NodeStatus::Done);
+}
+
+REGISTER_NODE(IntOutputNode, "Constant")

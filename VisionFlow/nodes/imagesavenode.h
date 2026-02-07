@@ -15,10 +15,11 @@ class ImageSaveNode : public QtNodes::NodeDelegateModel,public FlowNode
     Q_OBJECT
 
 public:
+    static QString staticNodeName;
     ImageSaveNode();
     QString caption() const override { return "Image Save"; }
     bool captionVisible() const override { return true; }
-    QString name() const override { return flowNodeName; }
+    QString name() const override { return staticNodeName; }
 
     unsigned int nPorts(QtNodes::PortType type) const override
     {

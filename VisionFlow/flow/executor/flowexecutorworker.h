@@ -9,10 +9,11 @@ class FlowExecutorWorker : public QObject
     Q_OBJECT
 
 public slots:
-    void run(FlowGraph graph);
+    void run(FlowGraph &graph);
 
 signals:
     void finished();
+    void nodeUpdated(int nodeId);
 
 private:
     static QVector<FlowNodeId> topologicalSort(FlowGraph& graph);
