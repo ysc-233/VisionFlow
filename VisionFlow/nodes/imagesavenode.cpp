@@ -1,9 +1,10 @@
 #include "imagesavenode.h"
 #include "flownodeautoregister.h"
 #include "flow/flowtypes.h"
+QString ImageSaveNode::staticNodeName = "ImageSave";
 ImageSaveNode::ImageSaveNode()
 {
-    flowNodeName = "ImageSave";
+    setStatus(FlowStatus::NodeStatus::Idle);
     _widget = new QWidget();
     auto lay = new QVBoxLayout(_widget);
 
@@ -53,6 +54,7 @@ void ImageSaveNode::compute()
         return;
 
     cv::imwrite(_path.toStdString(), *_input);
+    setStatus(FlowStatus::NodeStatus::Done);
 }
 
 REGISTER_NODE(ImageSaveNode, "Image")

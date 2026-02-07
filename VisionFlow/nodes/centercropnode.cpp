@@ -6,23 +6,22 @@
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QElapsedTimer>
+QString CenterCropNode::staticNodeName = "ImageCenterCrop";
 CenterCropNode::CenterCropNode()
 {
-    flowNodeName = "CenterCrop";
-
+    setStatus(FlowStatus::NodeStatus::Idle);
     _widget = new QWidget();
     auto layout = new QVBoxLayout(_widget);
 
     QLabel* label = new QLabel("Timeout (ms):");
     _timeoutSpin = new QSpinBox();
     _timeoutSpin->setRange(0, 60000);
-    _timeoutSpin->setValue(5000); // 默认 5 秒
+    _timeoutSpin->setValue(5000);
     layout->addWidget(label);
     layout->addWidget(_timeoutSpin);
-
-    // 当 UI 修改时更新节点内部变量
-    connect(_timeoutSpin, QOverload<int>::of(&QSpinBox::valueChanged), this,
-            [this](int val){ timeoutMs = val; });
+    timeoutMs = _timeoutSpin->value();
+    QObject::connect(_timeoutSpin, qOverload<int>(&QSpinBox::valueChanged),
+                     [this](int val){ timeoutMs = val; });
 }
 
 unsigned int CenterCropNode::nPorts(QtNodes::PortType type) const
@@ -42,6 +41,8 @@ QtNodes::NodeDataType CenterCropNode::dataType(QtNodes::PortType type, QtNodes::
 
 void CenterCropNode::setInData(std::shared_ptr<QtNodes::NodeData> data, QtNodes::PortIndex port)
 {
+    QMutexLocker locker(&_inputMutex);
+    qDebug()<<__FUNCTION__;
     if (!FlowExecutionContext::running.load())
         return;
 
@@ -56,6 +57,7 @@ void CenterCropNode::setInData(std::shared_ptr<QtNodes::NodeData> data, QtNodes:
         auto intData = std::dynamic_pointer_cast<IntNodeData>(data);
         if (intData)
             _inputInt = intData->ptr();
+        qDebug()<<__FUNCTION__<<*_inputInt;
     }
 }
 
@@ -72,8 +74,13 @@ QVariant CenterCropNode::getOutput(int)
 
 void CenterCropNode::setInput(int port, const QVariant &data)
 {
+    QMutexLocker locker(&_inputMutex);
     if (port == 0) _inputImg = data.value<MatPtr>();
-    else if (port == 1) _inputInt = std::make_shared<int>(data.toInt());
+    else if (port == 1)
+    {
+        _inputInt = std::make_shared<int>(data.toInt());
+        qDebug()<<__FUNCTION__<<*_inputInt;
+    }
 }
 
 void CenterCropNode::compute()
@@ -81,23 +88,33 @@ void CenterCropNode::compute()
     if (!_inputImg || _inputImg->empty() || !_inputInt)
         return;
 
-    QElapsedTimer timer;
-    timer.start();
-
-    // 等待 int 为 1 或超时
-    while (*_inputInt != 1 && FlowExecutionContext::running.load())
+    int inputNum;
     {
-        QThread::msleep(10); // 防止 CPU 空循环
-        if (timeoutMs > 0 && timer.elapsed() >= timeoutMs)
-        {
-            qDebug() << "[CenterCropNode] Timeout reached, stopping flow!";
-            FlowExecutionContext::running.store(false); // 停止流程
-            return;
-        }
+        QMutexLocker locker(&_inputMutex);
+        inputNum = *_inputInt;
     }
 
-    if (!FlowExecutionContext::running.load())
+    if (inputNum != 1)
+    {
+        if (getStatus() == FlowStatus::Idle)
+        {
+            waitTimer.start();
+            setStatus(FlowStatus::Waiting);
+        }
+        else if (getStatus() == FlowStatus::Waiting)
+        {
+            qint64 elapsed = waitTimer.elapsed();
+            if (timeoutMs > 0 && elapsed >= timeoutMs)
+            {
+                qDebug() << "[CenterCropNode] Timeout";
+                setStatus(FlowStatus::Timeout);
+                FlowExecutionContext::running.store(false);
+            }
+        }
         return;
+    }
+
+    setStatus(FlowStatus::Running);
 
     cv::Mat src = *_inputImg;
     int w = src.cols / 2;
@@ -110,5 +127,8 @@ void CenterCropNode::compute()
 
     *_output = src(cv::Rect(x, y, w, h)).clone();
     qDebug() << "[CenterCropNode] Center crop done";
+
+    setStatus(FlowStatus::Done);
 }
-REGISTER_NODE(CenterCropNode, "CenterCropNode")
+
+REGISTER_NODE(CenterCropNode, "Image")

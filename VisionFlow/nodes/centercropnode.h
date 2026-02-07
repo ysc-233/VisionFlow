@@ -1,5 +1,6 @@
 #ifndef CENTERCROPNODE_H
 #define CENTERCROPNODE_H
+
 #pragma once
 #include <QtNodes/NodeDelegateModel>
 #include "flow/executor/flowexecutioncontext.h"
@@ -7,15 +8,21 @@
 #include <memory>
 #include <flow/flowtypes.h>
 #include <QSpinBox>
+#include <QWidget>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QElapsedTimer>
 class CenterCropNode : public QtNodes::NodeDelegateModel, public FlowNode
 {
     Q_OBJECT
 public:
+    static QString staticNodeName;
+
     CenterCropNode();
 
     QString caption() const override { return "Center Crop"; }
     bool captionVisible() const override { return true; }
-    QString name() const override { return flowNodeName; }
+    QString name() const override { return staticNodeName; }
 
     unsigned int nPorts(QtNodes::PortType type) const override;
     QtNodes::NodeDataType dataType(QtNodes::PortType, QtNodes::PortIndex) const override;
@@ -30,13 +37,16 @@ public:
     QWidget* embeddedWidget() override { return _widget; }
 
 private:
+    QMutex _inputMutex;
     MatPtr _inputImg = nullptr;
     std::shared_ptr<int> _inputInt = nullptr;
     MatPtr _output = nullptr;
 
     QWidget* _widget = nullptr;
-    QSpinBox* _timeoutSpin = nullptr; // UI 输入框
-    int timeoutMs = 0;                // 节点内部存储
+    QSpinBox* _timeoutSpin = nullptr;
+    int timeoutMs = 0;
+    int counter = 0;
+    QElapsedTimer waitTimer;
 };
 
 

@@ -1,6 +1,5 @@
 #include "floweditorwidget.h"
 #include <QVBoxLayout>
-
 #include <QtNodes/BasicGraphicsScene>
 #include <QtNodes/DataFlowGraphModel>
 #include <QtNodes/GraphicsView>
@@ -23,7 +22,7 @@ FlowEditorWidget::FlowEditorWidget(QWidget *parent)
     // Scene
     m_scene = new FlowScene(*m_model,m_registry,this);
     // View
-    m_view = new FlowView(m_scene);
+    m_view = new FlowView(m_scene,this);
     m_view->setRenderHint(QPainter::Antialiasing);
 
     auto layout = new QVBoxLayout(this);

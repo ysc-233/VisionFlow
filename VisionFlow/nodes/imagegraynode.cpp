@@ -1,6 +1,6 @@
 #include "imagegraynode.h"
 #include "flownodeautoregister.h"
-
+QString ImageGrayNode::staticNodeName = "ImageGray";
 void ImageGrayNode::setInData(
     std::shared_ptr<QtNodes::NodeData> data,
     QtNodes::PortIndex)
@@ -62,6 +62,7 @@ void ImageGrayNode::compute()
     {
         *_out = _input->clone();
     }
+    setStatus(FlowStatus::NodeStatus::Done);
 }
 
 REGISTER_NODE(ImageGrayNode, "Image")

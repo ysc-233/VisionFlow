@@ -6,10 +6,11 @@
 class FlowView : public QtNodes::GraphicsView
 {
 public:
-    using GraphicsView::GraphicsView;
-
+    FlowView(QtNodes::BasicGraphicsScene* scene,
+             QWidget* parent = nullptr);
 protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
+    bool viewportEvent(QEvent* event) override;
 };
 
 #endif // FLOWVIEW_H

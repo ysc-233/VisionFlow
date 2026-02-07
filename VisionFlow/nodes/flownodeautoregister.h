@@ -6,6 +6,7 @@
 #include <vector>
 #include <functional>
 #include <QThread>
+#include "NodeLibraryRegistry.h"
 class NodeAutoRegistry
 {
 public:
@@ -45,6 +46,13 @@ public:
             {
                 reg.registerModel<T>(category);
             });
+
+        NodeLibraryRegistry::instance().addNode(
+        {
+            T::staticNodeName,
+            category,
+            [](){ return std::make_unique<T>(); }
+        });
     }
 };
 

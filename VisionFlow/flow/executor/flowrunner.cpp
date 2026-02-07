@@ -18,24 +18,21 @@ void FlowRunner::run(DataFlowGraphModel& model)
 
     FlowExecutionContext::running.store(true);
 
-    FlowGraph graph = FlowGraphExporter::exportGraph(model);
-
     QThread* thread = new QThread;
     auto* worker = new FlowExecutorWorker;
 
     worker->moveToThread(thread);
 
-
     const int globalTimeoutMs = 3000;
     FlowTimeoutController* timeoutController = new FlowTimeoutController(globalTimeoutMs);
 
-    // 超时停止流程
     QObject::connect(timeoutController, &FlowTimeoutController::timeoutReached, [](){
         qDebug() << "[FlowRunner] Global timeout reached!";
         FlowExecutionContext::running.store(false);
     });
-    QObject::connect(thread, &QThread::started,[worker, graph]()
+    QObject::connect(thread, &QThread::started,[worker, &model]()
     {
+        FlowGraph graph = FlowGraphExporter::exportGraph(model);
         worker->run(graph);
     });
     QObject::connect(worker,&FlowExecutorWorker::finished,thread,&QThread::quit);
@@ -57,5 +54,6 @@ void FlowRunner::run(DataFlowGraphModel& model)
 
 void FlowRunner::stop()
 {
+    qDebug()<<__FUNCTION__<< QThread::currentThreadId();
     FlowExecutionContext::running.store(false);
 }

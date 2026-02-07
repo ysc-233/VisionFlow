@@ -2,9 +2,10 @@
 #include "flownodeautoregister.h"
 #include <opencv2/opencv.hpp>
 #include "flow/flowtypes.h"
+QString ImageMergeNode::staticNodeName = "ImageMerge";
 ImageMergeNode::ImageMergeNode()
 {
-    flowNodeName = "ImageMerge";
+    setStatus(FlowStatus::NodeStatus::Idle);
     _widget = new QWidget();
     auto lay = new QVBoxLayout(_widget);
 
@@ -141,6 +142,7 @@ void ImageMergeNode::compute()
     }
     _ready[0] = false;
     _ready[1] = false;
+    setStatus(FlowStatus::NodeStatus::Done);
 }
 
 

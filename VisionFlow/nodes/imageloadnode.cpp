@@ -3,10 +3,10 @@
 #include "flownodeautoregister.h"
 #include "QMessageBox"
 #include "flow/flowtypes.h"
-
+QString ImageLoadNode::staticNodeName = "ImageLoad";
 ImageLoadNode::ImageLoadNode()
 {
-    flowNodeName = "ImageLoad";
+    setStatus(FlowStatus::NodeStatus::Idle);
     _widget = new QWidget();
     auto lay = new QVBoxLayout(_widget);
 
@@ -52,6 +52,7 @@ void ImageLoadNode::compute()
 {
     if (!_image || _image->empty())
         qDebug() << "ImageLoad: empty image";
+    setStatus(FlowStatus::NodeStatus::Done);
 }
 
 REGISTER_NODE(ImageLoadNode, "Image")
