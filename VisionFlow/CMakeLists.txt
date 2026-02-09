@@ -10,7 +10,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-# -------------------------
+# ---------------------------
 # 1️⃣ Qt 配置
 # --------------------------
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core OpenGL Gui REQUIRED)

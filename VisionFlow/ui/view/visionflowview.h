@@ -2,7 +2,8 @@
 #define VISIONFLOWVIEW_H
 
 #include <QWidget>
-#include "ui/component/floweditorwidget.h"
+#include <QMenuBar>
+#include "ui/component/WorkSpace/floweditorwidget.h"
 namespace Ui {
 class VisionFlowView;
 }
@@ -16,9 +17,20 @@ public:
     ~VisionFlowView();
 private:
     void setConnections();
+    void createMenu();
 private:
     Ui::VisionFlowView *ui;
     FlowEditorWidget *m_flowEditorWidget;
+
+    QMenuBar* m_menuBar;
+    QMenu* m_fileMenu;
+
+    QAction* m_actNew;
+    QAction* m_actOpen;
+    QAction* m_actSave;
+    QAction* m_actSaveAs;
+
+    QString m_currentFile;
 };
 
 #endif // VISIONFLOWVIEW_H
