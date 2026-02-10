@@ -22,7 +22,7 @@ VisionFlowView::VisionFlowView(QWidget *parent) :
     NodeLibraryWidget *m_nodeLibraryWidget = new NodeLibraryWidget(this);
     QVBoxLayout *lay_nodeLib = new QVBoxLayout(ui->gpb_nodeLibrary);
     lay_nodeLib->addWidget(m_nodeLibraryWidget);
-        createMenu();
+    createMenu();
     setConnections();
 }
 
@@ -44,6 +44,13 @@ void VisionFlowView::setConnections()
     connect(ui->btn_Stop, &QPushButton::clicked,this, [this]()
     {
         FlowRunner::stop();
+    });
+
+    connect(m_flowEditorWidget, &FlowEditorWidget::sig_updateImage,this, [=](QImage img)
+    {
+        QPixmap pixmap = QPixmap::fromImage(img);
+        ui->lbl_display->setPixmap(pixmap);
+        ui->lbl_display->setPixmap(pixmap.scaled(ui->lbl_display->size(), Qt::KeepAspectRatio));
     });
 }
 

@@ -7,13 +7,11 @@ void ImageGrayNode::setInData(
 {
     if (!FlowExecutionContext::running.load())
         return;
-
     auto img =
         std::dynamic_pointer_cast<ImageData>(data);
 
     if (!img)
         return;
-
     auto input = img->matPtr();
 
     if (!input || input->empty())
@@ -63,6 +61,7 @@ void ImageGrayNode::compute()
         *_out = _input->clone();
     }
     setStatus(FlowStatus::NodeStatus::Done);
+    Q_EMIT dataUpdated(0);
 }
 
 REGISTER_NODE(ImageGrayNode, "Image")

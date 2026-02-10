@@ -5,7 +5,7 @@
 #include <QWidget>
 #include <QTabWidget>
 #include <memory>
-
+#include "flow/graph/flownode.h"
 namespace QtNodes {
 class BasicGraphicsScene;
 class GraphicsView;
@@ -37,10 +37,11 @@ public:
     FlowPage* currentPage();
     void removeTab(int index);
     void setupTabContextMenu();
-
+signals:
+    void sig_updateImage(QImage img);
 private:
     QTabWidget* m_tabWidget;
-
+    void updateDisplay(FlowNode* fn);
 public:
     std::shared_ptr<QtNodes::NodeDelegateModelRegistry> m_registry;
 };

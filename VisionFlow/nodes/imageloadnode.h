@@ -46,10 +46,21 @@ public:
     QVariant getOutput(int port) override;
     void setInput(int port, const QVariant &data) override{return;}
     void compute() override;
+    QJsonObject saveData() const override;
+    void loadData(const QJsonObject& obj) override;
+    std::vector<cv::Mat> outputImages() const override
+    {
+        if (!_image || _image->empty())
+            return {};
+        return { *_image };
+        //multy
+        //return { img1, img2, img3 };
+    }
 
 private:
     QWidget* _widget;
     QLabel* _label;
+    QString _filePath;
     MatPtr  _image;
 };
 #endif // IMAGELOADNODE_H

@@ -39,6 +39,14 @@ public:
     QVariant getOutput(int port) override;
     void setInput(int port, const QVariant &data) override;
     void compute() override;
+    std::vector<cv::Mat> outputImages() const override
+    {
+        if (!_out || _out->empty())
+            return {};
+        return { *_out };
+        //multy
+        //return { img1, img2, img3 };
+    }
 private:
     MatPtr _input;
     MatPtr _out;

@@ -12,7 +12,6 @@ class NodeDelegateModelRegistry;
 class FlowScene : public QtNodes::BasicGraphicsScene
 {
     Q_OBJECT
-
 public:
     FlowScene(
         QtNodes::AbstractGraphModel& model,

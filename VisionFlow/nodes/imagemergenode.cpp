@@ -143,6 +143,7 @@ void ImageMergeNode::compute()
     _ready[0] = false;
     _ready[1] = false;
     setStatus(FlowStatus::NodeStatus::Done);
+    Q_EMIT dataUpdated(0);
 }
 
 
