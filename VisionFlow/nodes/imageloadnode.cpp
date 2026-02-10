@@ -18,18 +18,18 @@ ImageLoadNode::ImageLoadNode()
 
     connect(btn, &QPushButton::clicked, this, [this]()
     {
-        QString file = QFileDialog::getOpenFileName(
+        _filePath = QFileDialog::getOpenFileName(
             nullptr, "Open Image");
 
-        if (!file.isEmpty())
+        if (!_filePath.isEmpty())
         {
             QImage img;
-            if (!img.load(file))
+            if (!img.load(_filePath))
                 return;
 
             auto imgcv = QImageToMat(img);
             _image = std::make_shared<cv::Mat>(std::move(imgcv));
-            _label->setText(file);
+            _label->setText(_filePath);
         }
     });
 }
@@ -53,6 +53,41 @@ void ImageLoadNode::compute()
     if (!_image || _image->empty())
         qDebug() << "ImageLoad: empty image";
     setStatus(FlowStatus::NodeStatus::Done);
+    Q_EMIT dataUpdated(0);
+}
+
+QJsonObject ImageLoadNode::saveData() const
+{
+    qDebug()<<__FUNCTION__;
+    QJsonObject obj;
+    if (!_filePath.isEmpty())
+        obj["filePath"] = _filePath;
+    return obj;
+}
+
+void ImageLoadNode::loadData(const QJsonObject &obj)
+{
+    _filePath = obj["filePath"].toString();
+
+    if (_filePath.isEmpty())
+    {
+        _label->setText("No file");
+        _image.reset();
+        return;
+    }
+
+    QImage img;
+    if (!img.load(_filePath))
+    {
+        _label->setText("Load failed");
+        _image.reset();
+        return;
+    }
+
+    auto imgcv = QImageToMat(img);
+    _image = std::make_shared<cv::Mat>(std::move(imgcv));
+
+    _label->setText(_filePath);
 }
 
 REGISTER_NODE(ImageLoadNode, "Image")

@@ -16,7 +16,7 @@
 #include "flowview.h"
 #include "flowscene.h"
 #include "customtabwidget.h"
-
+#include "utils/imageconvert.h"
 FlowEditorWidget::FlowEditorWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -92,9 +92,25 @@ FlowEditorWidget::FlowPage* FlowEditorWidget::createFlowPage(QString name)
     FlowPage* page = new FlowPage{ model, scene, view, container };
     container->setProperty("flowpage", QVariant::fromValue((void*)page));
 
+    connect(scene, &FlowScene::nodeSelected,this, [=](QtNodes::NodeId nodeId)
+    {
+        auto items = scene->selectedItems();
+        if (items.isEmpty())
+            return;
+
+        auto page = currentPage();
+        if (!page) return;
+
+        auto* delegate = page->model->delegateModel<QtNodes::NodeDelegateModel>(nodeId);
+
+        FlowNode* fn = dynamic_cast<FlowNode*>(delegate);
+        if (!fn) return;
+
+        updateDisplay(fn);
+    });
+
     return page;
 }
-
 
 FlowEditorWidget::FlowPage* FlowEditorWidget::currentPage()
 {
@@ -173,6 +189,33 @@ void FlowEditorWidget::setupTabContextMenu()
     });
 }
 
+void FlowEditorWidget::updateDisplay(FlowNode *fn)
+{
+    auto imgs = fn->outputImages();
+    if (imgs.empty())
+        return;
+
+    int width = 0;
+    int height = 0;
+
+    for (auto& m : imgs)
+    {
+        width = std::max(width, m.cols);
+        height += m.rows;
+    }
+
+    cv::Mat result(height, width, imgs[0].type(), cv::Scalar::all(0));
+
+    int y = 0;
+    for (auto& m : imgs)
+    {
+        m.copyTo(result(cv::Rect(0, y, m.cols, m.rows)));
+        y += m.rows;
+    }
+    QImage qimg = MatToQImage(result);
+    emit sig_updateImage(qimg);
+}
+
 
 void FlowEditorWidget::newFlow()
 {
@@ -196,43 +239,77 @@ void FlowEditorWidget::saveFlow(const QString &file)
     QJsonObject root;
     QJsonArray flows;
 
-    for (int i = 0; i < m_tabWidget->count(); ++i) {
+    for (int i = 0; i < m_tabWidget->count(); ++i)
+    {
         QWidget* w = m_tabWidget->widget(i);
         if (!w)
             continue;
 
-        FlowPage* page = static_cast<FlowPage*>(w->property("flowpage").value<void*>());
+        FlowPage* page =
+            static_cast<FlowPage*>(w->property("flowpage").value<void*>());
+
         if (!page || !page->model)
             continue;
 
         QJsonObject flowObj;
         flowObj["name"] = m_tabWidget->tabText(i);
         flowObj["graph"] = page->model->save();
+
+        QJsonObject customNodes;
+
+        for (auto nodeId : page->model->allNodeIds())
+        {
+            auto* delegate =
+                page->model->delegateModel<QtNodes::NodeDelegateModel>(nodeId);
+
+            if (!delegate)
+                continue;
+
+            FlowNode* fn =
+                dynamic_cast<FlowNode*>(delegate);
+
+            if (!fn)
+                continue;
+
+            QJsonObject custom = fn->saveData();
+
+            if (!custom.isEmpty())
+            {
+                customNodes[QString::number(nodeId)] = custom;
+            }
+        }
+
+        if (!customNodes.isEmpty())
+            flowObj["nodesCustom"] = customNodes;
+
         flows.append(flowObj);
     }
 
     root["flows"] = flows;
 
     QFile f(file);
-    if (f.open(QIODevice::WriteOnly)) {
+    if (f.open(QIODevice::WriteOnly))
+    {
         f.write(QJsonDocument(root).toJson());
         f.close();
+
         QMessageBox::information(this, "Save",
-                                 QString("Workflow saved to:\n%1").arg(file));
-    } else {
+            QString("Workflow saved to:\n%1").arg(file));
+    }
+    else
+    {
         QMessageBox::critical(this, "Save Error",
-                              QString("Failed to save file:\n%1").arg(file));
+            QString("Failed to save file:\n%1").arg(file));
     }
 }
-
-
 
 void FlowEditorWidget::loadFlow(const QString &file)
 {
     QFile f(file);
-    if (!f.open(QIODevice::ReadOnly)) {
+    if (!f.open(QIODevice::ReadOnly))
+    {
         QMessageBox::critical(this, "Load Error",
-                              QString("Failed to open file:\n%1").arg(file));
+            QString("Failed to open file:\n%1").arg(file));
         return;
     }
 
@@ -240,29 +317,56 @@ void FlowEditorWidget::loadFlow(const QString &file)
     f.close();
 
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (doc.isNull()) {
-        QMessageBox::critical(this, "Load Error", "Invalid JSON format");
+    if (doc.isNull())
+    {
+        QMessageBox::critical(this, "Load Error",
+            "Invalid JSON format");
         return;
     }
 
     QJsonObject root = doc.object();
     QJsonArray flows = root["flows"].toArray();
 
-    for (int i = m_tabWidget->count() - 1; i >= 0; --i) {
+    for (int i = m_tabWidget->count() - 1; i >= 0; --i)
         removeTab(i);
-    }
 
-    for (int i = 0; i < flows.size(); ++i) {
+    for (int i = 0; i < flows.size(); ++i)
+    {
         QJsonObject flowObj = flows[i].toObject();
         QString name = flowObj["name"].toString();
         QJsonObject graph = flowObj["graph"].toObject();
+        QJsonObject customNodes =
+            flowObj["nodesCustom"].toObject();
 
         auto page = createFlowPage(name);
-        if (page && page->model) {
-            page->model->load(graph);
+        if (!page || !page->model)
+            continue;
+
+        page->model->load(graph);
+
+        for (auto nodeId : page->model->allNodeIds())
+        {
+            QString idStr = QString::number(nodeId);
+
+            if (!customNodes.contains(idStr))
+                continue;
+
+            auto* delegate =
+                page->model->delegateModel<QtNodes::NodeDelegateModel>(nodeId);
+
+            if (!delegate)
+                continue;
+
+            FlowNode* fn =
+                dynamic_cast<FlowNode*>(delegate);
+
+            if (!fn)
+                continue;
+
+            fn->loadData(customNodes[idStr].toObject());
         }
     }
 
     QMessageBox::information(this, "Load",
-                             QString("Workflow loaded from:\n%1").arg(file));
+        QString("Workflow loaded from:\n%1").arg(file));
 }
