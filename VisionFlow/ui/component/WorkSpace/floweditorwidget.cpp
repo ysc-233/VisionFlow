@@ -12,6 +12,7 @@
 #include <QtNodes/GraphicsView>
 #include <QtNodes/NodeDelegateModelRegistry>
 
+#include <flow/executor/flowrunner.h>
 #include "nodes/flownodeautoregister.h"
 #include "flowview.h"
 #include "flowscene.h"
@@ -21,17 +22,16 @@ FlowEditorWidget::FlowEditorWidget(QWidget *parent)
     : QWidget(parent)
 {
     using namespace QtNodes;
-
     m_registry = std::make_shared<NodeDelegateModelRegistry>();
     NodeAutoRegistry::instance().registerAll(*m_registry);
 
     m_tabWidget = new CustomTabWidget(this);
-    m_tabWidget->setTabsClosable(true);
+    m_tabWidget->setTabsClosable(false);
     m_tabWidget->setMovable(true);
 
     connect(static_cast<CustomTabWidget*>(m_tabWidget), &CustomTabWidget::addButtonClicked,
             this, [this](){
-        int newIndex = m_tabWidget->count() + 1;
+        int newIndex = m_tabWidget->count();
         createFlowPage(QString("Flow%1").arg(newIndex));
     });
 
@@ -60,6 +60,8 @@ FlowEditorWidget::FlowEditorWidget(QWidget *parent)
             removeTab(index);
         }
     });
+
+    connect(&FlowRunner::instance(),&FlowRunner::sig_runFinished,this,&FlowEditorWidget::updateDisplay);
 }
 
 FlowEditorWidget::~FlowEditorWidget()
@@ -105,8 +107,8 @@ FlowEditorWidget::FlowPage* FlowEditorWidget::createFlowPage(QString name)
 
         FlowNode* fn = dynamic_cast<FlowNode*>(delegate);
         if (!fn) return;
-
-        updateDisplay(fn);
+        m_flowNode = fn;
+        updateDisplay();
     });
 
     return page;
@@ -189,9 +191,9 @@ void FlowEditorWidget::setupTabContextMenu()
     });
 }
 
-void FlowEditorWidget::updateDisplay(FlowNode *fn)
+void FlowEditorWidget::updateDisplay()
 {
-    auto imgs = fn->outputImages();
+    auto imgs = m_flowNode->outputImages();
     if (imgs.empty())
         return;
 

@@ -1,29 +1,30 @@
 #ifndef CUSTOMTABWIDGET_H
 #define CUSTOMTABWIDGET_H
-#pragma once
-
 #include <QTabWidget>
-#include <QToolButton>
 #include <QTabBar>
-#include <QResizeEvent>
 
 class CustomTabBar : public QTabBar
 {
     Q_OBJECT
 public:
     explicit CustomTabBar(QWidget *parent = nullptr);
-    void updateAddButtonPosition();
+
 signals:
     void addButtonClicked();
-
 protected:
-    void resizeEvent(QResizeEvent *event) override;
-    void tabLayoutChange() override;
+    void tabInserted(int index) override;
+    void tabRemoved(int index) override;
+    void tabMoved(int from, int to);
+
+private slots:
+    void onTabBarClicked(int index);
 
 private:
+    void ensureAddTabLast();   // 确保“+”标签页存在且在最后
+    bool isAddTab(int index) const; // 判断是否为“+”标签页
+    int findAddTab() const;   // 查找“+”标签页的索引，未找到返回-1
 
-
-    QToolButton *m_addButton;
+    bool m_updatingAddTab;    // 防止递归更新
 };
 
 class CustomTabWidget : public QTabWidget
@@ -35,10 +36,8 @@ public:
 signals:
     void addButtonClicked();
 
-protected:
-    void resizeEvent(QResizeEvent *event) override;
-
 private:
     CustomTabBar *m_customTabBar;
 };
+
 #endif // CUSTOMTABWIDGET_H

@@ -11,6 +11,26 @@
 #include <QApplication>
 using namespace QtNodes;
 
+FlowRunner* FlowRunner::m_instance = nullptr;
+
+FlowRunner::FlowRunner(QObject* parent)
+    : QObject(parent)
+{
+}
+
+FlowRunner::~FlowRunner()
+{
+}
+
+FlowRunner& FlowRunner::instance()
+{
+    if (!m_instance) {
+        m_instance = new FlowRunner();
+        // qAddPostRoutine([]() { delete m_instance; });
+    }
+    return *m_instance;
+}
+
 void FlowRunner::run(DataFlowGraphModel& model)
 {
     Q_ASSERT(QThread::currentThread() == qApp->thread());
@@ -38,12 +58,13 @@ void FlowRunner::run(DataFlowGraphModel& model)
     QObject::connect(worker,&FlowExecutorWorker::finished,thread,&QThread::quit);
     QObject::connect(worker,&FlowExecutorWorker::finished,worker,&QObject::deleteLater);
     QObject::connect(thread,&QThread::finished,thread,&QObject::deleteLater);
-    QObject::connect(worker, &FlowExecutorWorker::finished, qApp, [thread, worker, timeoutController]() {
+    QObject::connect(worker, &FlowExecutorWorker::finished, qApp, [this,thread, worker, timeoutController]() {
             FlowExecutionContext::running.store(false);
             timeoutController->stop();
             timeoutController->deleteLater();
             thread->quit();
             qDebug() << "[FlowRunner] Flow finished!";
+            emit sig_runFinished();
         },
         Qt::QueuedConnection
     );

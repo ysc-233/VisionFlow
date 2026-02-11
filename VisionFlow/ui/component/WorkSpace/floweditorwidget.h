@@ -39,9 +39,11 @@ public:
     void setupTabContextMenu();
 signals:
     void sig_updateImage(QImage img);
+public slots:
+    void updateDisplay();
 private:
     QTabWidget* m_tabWidget;
-    void updateDisplay(FlowNode* fn);
+    FlowNode *m_flowNode;
 public:
     std::shared_ptr<QtNodes::NodeDelegateModelRegistry> m_registry;
 };

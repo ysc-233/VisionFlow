@@ -37,13 +37,13 @@ void VisionFlowView::setConnections()
     {
         auto page = m_flowEditorWidget->currentPage();
         if (page && page->model) {
-            FlowRunner::run(*page->model);
+            FlowRunner::instance().run(*page->model);
         }
     });
 
     connect(ui->btn_Stop, &QPushButton::clicked,this, [this]()
     {
-        FlowRunner::stop();
+        FlowRunner::instance().stop();
     });
 
     connect(m_flowEditorWidget, &FlowEditorWidget::sig_updateImage,this, [=](QImage img)
