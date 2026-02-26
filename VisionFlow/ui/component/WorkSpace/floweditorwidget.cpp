@@ -12,7 +12,8 @@
 #include <QtNodes/GraphicsView>
 #include <QtNodes/NodeDelegateModelRegistry>
 
-#include <flow/executor/flowrunner.h>
+#include "flow/executor/flowrunner.h"
+#include "nodes/imageloadnode.h"
 #include "nodes/flownodeautoregister.h"
 #include "flowview.h"
 #include "flowscene.h"
@@ -22,6 +23,8 @@ FlowEditorWidget::FlowEditorWidget(QWidget *parent)
     : QWidget(parent)
 {
     using namespace QtNodes;
+    m_flowNode = new ImageLoadNode();//临时初始化
+
     m_registry = std::make_shared<NodeDelegateModelRegistry>();
     NodeAutoRegistry::instance().registerAll(*m_registry);
 

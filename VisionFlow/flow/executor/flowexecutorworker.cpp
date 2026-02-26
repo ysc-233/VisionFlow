@@ -5,16 +5,19 @@
 #include <QElapsedTimer>
 #include <QThread>
 #include "flow/executor/flowexecutioncontext.h"
+#include "utils/logmanager.h"
 
 void FlowExecutorWorker::run(FlowGraph &graph)
 {
-    qDebug() << __FUNCTION__
-             << QThread::currentThreadId()
-             << "Running =============================";
-
     // ---------- 拓扑排序 ----------
     auto order = topologicalSort(graph);
-    qDebug() << "Execution order:" << order;
+    QString strOrder = "[";
+    for (int i = 0; i < order.size(); ++i) {
+        strOrder += QString::number(order[i]);
+        if (i < order.size() - 1) strOrder += ", ";
+    }
+    strOrder += "]";  // "[1, 2, 3]"
+    LOG_INFO(QString("[FlowWorker] Execution order: %1").arg(strOrder));
 
     // ---------- 建立 id -> instance 映射 ----------
     QHash<FlowNodeId, FlowNodeInstance*> map;
@@ -43,7 +46,6 @@ void FlowExecutorWorker::run(FlowGraph &graph)
                 continue;
 
             auto status = inst->flowNode->getStatus();
-//            qDebug() << __FUNCTION__ <<"Before:"<< inst->model->name() <<FlowStatus::ConverToString(status);
             if (status == FlowStatus::Timeout)
             {
                 FlowExecutionContext::running.store(false);
@@ -67,7 +69,6 @@ void FlowExecutorWorker::run(FlowGraph &graph)
 
             nodeCost[id] += nodeTimer.elapsed();
 
-//            qDebug() << __FUNCTION__ <<"After:"<< inst->model->name() <<FlowStatus::ConverToString(inst->flowNode->getStatus());
             if (inst->flowNode->getStatus() == FlowStatus::Done)
             {
                 auto conns = outputMap.value(id);
@@ -93,21 +94,19 @@ void FlowExecutorWorker::run(FlowGraph &graph)
 
         QThread::msleep(5);
     }
-    qDebug() << "===== Node Cost Summary =====";
+    LOG_INFO("[FlowWorker] Node Cost Summary:");
     for (auto id : order)
     {
         auto* inst = map.value(id, nullptr);
         if (!inst || !inst->flowNode)
             continue;
-
-        qDebug() << "[Node]"
-                 << inst->model->name()
-                 << "(id:" << id << ")"
-                 << "total:" << nodeCost[id] << "ms";
+        QString outMsg = "[Node]"
+                 + inst->model->name()
+                 + "(id:" + QString::number(id) + ")"
+                 + "total:" + QString::number(nodeCost[id]) + "ms";
+        LOG_INFO(outMsg);
     }
-    qDebug() << "===== Total Execution Time ====="
-             << totalTimer.elapsed()
-             << "ms";
+    LOG_INFO(QString("[FlowWorker] Total Execution Time: %1 ms").arg(totalTimer.elapsed()));
     //Reset Status
     for (auto id : order)
     {

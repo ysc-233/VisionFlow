@@ -4,6 +4,7 @@
 #include "flow/exporter/flowgraphexporter.h"
 #include "flow/executor/flowexecutorworker.h"
 #include "flow/executor/flowtimeoutcontroller.h"
+#include "utils/logmanager.h"
 #include <QElapsedTimer>
 #include <QDebug>
 #include <QThread>
@@ -34,7 +35,7 @@ FlowRunner& FlowRunner::instance()
 void FlowRunner::run(DataFlowGraphModel& model)
 {
     Q_ASSERT(QThread::currentThread() == qApp->thread());
-    qDebug() <<__FUNCTION__<< QThread::currentThreadId() <<"Start running!";
+    LOG_INFO("[FlowRunner] Flow start running!");
 
     FlowExecutionContext::running.store(true);
 
@@ -46,8 +47,9 @@ void FlowRunner::run(DataFlowGraphModel& model)
     const int globalTimeoutMs = 3000;
     FlowTimeoutController* timeoutController = new FlowTimeoutController(globalTimeoutMs);
 
-    QObject::connect(timeoutController, &FlowTimeoutController::timeoutReached, [](){
-        qDebug() << "[FlowRunner] Global timeout reached!";
+    QObject::connect(timeoutController, &FlowTimeoutController::timeoutReached, []()
+    {
+        LOG_WARNING("[FlowRunner] Global timeout reached!");
         FlowExecutionContext::running.store(false);
     });
     QObject::connect(thread, &QThread::started,[worker, &model]()
@@ -63,7 +65,7 @@ void FlowRunner::run(DataFlowGraphModel& model)
             timeoutController->stop();
             timeoutController->deleteLater();
             thread->quit();
-            qDebug() << "[FlowRunner] Flow finished!";
+            LOG_INFO("[FlowRunner] Flow finished!");
             emit sig_runFinished();
         },
         Qt::QueuedConnection
@@ -75,6 +77,5 @@ void FlowRunner::run(DataFlowGraphModel& model)
 
 void FlowRunner::stop()
 {
-    qDebug()<<__FUNCTION__<< QThread::currentThreadId();
     FlowExecutionContext::running.store(false);
 }
