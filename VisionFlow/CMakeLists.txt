@@ -12,7 +12,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # ---------------------------
 # 1️⃣ Qt 配置
-# ---------------------------
+# --------------------------
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core OpenGL Gui REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR}
     COMPONENTS Widgets Core OpenGL Gui
